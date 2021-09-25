@@ -16,6 +16,7 @@ static const char *connection_key = "Connection";
 static const char *user_agent_key= "User-Agent";
 static const char *proxy_connection_key = "Proxy-Connection";
 static const char *host_key = "Host";
+void *thread(void *vargp);
 
 void doit(int connfd);
 void parse_uri(char *uri,char *hostname,char *path,int *port);
@@ -27,7 +28,7 @@ int main(int argc,char **argv)
     int listenfd,connfd;
     socklen_t  clientlen;
     char hostname[MAXLINE],port[MAXLINE];
-
+    pthread_t tid;
     struct sockaddr_storage clientaddr;/*generic sockaddr struct which is 28 Bytes.The same use as sockaddr*/
 
     if(argc != 2){
@@ -43,15 +44,17 @@ int main(int argc,char **argv)
         /*print accepted message*/
         Getnameinfo((SA*)&clientaddr,clientlen,hostname,MAXLINE,port,MAXLINE,0);
         printf("Accepted connection from (%s %s).\n",hostname,port);
-
+        Pthread_create(&tid,NULL,thread,(void *)connfd);
         /*sequential handle the client transaction*/
-        doit(connfd);
-
-        Close(connfd);
     }
     return 0;
 }
-
+void *thread(void *vargp){
+    int connfd = (int)vargp;
+    Pthread_detach(pthread_self());
+    doit(connfd);
+    Close(connfd);
+}
 /*handle the client HTTP transaction*/
 void doit(int connfd)
 {
